@@ -84,9 +84,37 @@ def softmax_with_cross_entropy(predictions, target_index):
     '''
     # TODO implement softmax with cross-entropy
     # Your final implementation shouldn't have any loops
-    raise Exception("Not implemented!")
+    # raise Exception("Not implemented!")
     
-    softmax(predictions)
+    if not isinstance (target_index,np.ndarray):
+        if isinstance(target_index, int):
+            target_index = np.array(target_index)
+            print("target_index (second argument) is int, converted to np.array")
+        else:
+            raise("Unapproporate type of target_index (second argument)")
+            
+    if predictions.ndim == 1:
+        n_clases = predictions.shape[0]
+        index_array = (np.zeros_like(predictions) + np.arange(n_clases) == target_index).astype(int)
+        print(index_array)
+    elif predictions.ndim == 2:
+        batch_size = predictions.shape[0]
+        n_clases = predictions.shape[1]
+        index_array = (np.zeros_like(predictions) + np.arange(n_clases) == target_index.reshape(batch_size,-1)).astype(int)
+        #dprediction = probs * index_array - probs[np.arange(batch_size),target_index].reshape(batch_size,-1) ?* probs /(probs) 
+    else:
+        raise Exception("Unappropriate shape of predicions array")
+    
+    
+    print(index_array)
+
+    
+    probs = softmax(predictions)
+    probs[target_index] - probs[target_index] * probs[target_index]
+    -probs[target_index] * probs[current_index]
+    
+    
+    
     
     return loss, dprediction
 
