@@ -13,8 +13,11 @@ def binary_classification_metrics(prediction, ground_truth):
     precision, recall, f1, accuracy - classification metrics
     '''
     num_samples = ground_truth.shape[0]
+    
 
-    accuracy =1.- np.sum(np.abs(prediction.astype(int) - ground_truth.astype(int)))/num_samples
+    #accuracy =1.- np.sum(np.abs(prediction.astype(int) - ground_truth.astype(int)))/num_samples
+    
+    accuracy = np.sum(prediction * ground_truth) / num_samples
     precision =np.sum( prediction * ground_truth) / np.sum( prediction)
     recall = np.sum( prediction * ground_truth) / np.sum( ground_truth)
     f1 = 2 * precision * recall / (precision + recall)

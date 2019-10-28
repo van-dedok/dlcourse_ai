@@ -25,14 +25,20 @@ def check_gradient(f, x, delta=1e-5, tol = 1e-4):
 
     assert analytic_grad.shape == x.shape
     analytic_grad = analytic_grad.copy()
-
+ 
     # We will go through every dimension of x and compute numeric
     # derivative for it
     it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])
+    
     while not it.finished:
         ix = it.multi_index
         analytic_grad_at_ix = analytic_grad[ix]
-        numeric_grad_at_ix = 0
+        x_plus = x.copy()
+        x_minus = x.copy()
+        x_plus[ix] += delta
+        x_minus[ix] -= delta
+
+        numeric_grad_at_ix = (f(x_plus)[0] - f(x_minus)[0]) / (2 * delta) 
 
         # TODO compute value of numeric gradient of f to idx
         if not np.isclose(numeric_grad_at_ix, analytic_grad_at_ix, tol):
