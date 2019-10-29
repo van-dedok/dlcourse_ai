@@ -67,7 +67,7 @@ def check_layer_gradient(layer, x, delta=1e-5, tol=1e-4):
         d_out = np.ones_like(output) * output_weight
         grad = layer.backward(d_out)
         return loss, grad
-
+    
     return check_gradient(helper_func, x, delta, tol)
 
 
@@ -92,6 +92,7 @@ def check_layer_param_gradient(layer, x,
 
     output = layer.forward(x)
     output_weight = np.random.randn(*output.shape)
+  
 
     def helper_func(w):
         param.value = w
@@ -101,6 +102,8 @@ def check_layer_param_gradient(layer, x,
         layer.backward(d_out)
         grad = param.grad
         return loss, grad
+    #print(initial_w.shape)
+    #print(helper_func(initial_w)[1].shape)
 
     return check_gradient(helper_func, initial_w, delta, tol)
 

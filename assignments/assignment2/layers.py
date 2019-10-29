@@ -53,13 +53,14 @@ class Param:
 class ReLULayer:
     def __init__(self):
         self.X_saved = None
+        self.der_at_zero = 0.5
         pass
 
     def forward(self, X):
         # TODO: Implement forward pass
         # Hint: you'll need to save some information about X
         # to use it later in the backward pass
-        self.X_saved = (X == np.zeros_like(X)) * 0.5 + (X > np.zeros_like(X))
+        self.X_saved = (X == np.zeros_like(X)) * self.der_at_zero + (X > np.zeros_like(X))
         
         return X * self.X_saved
 
@@ -94,7 +95,12 @@ class FullyConnectedLayer:
     def forward(self, X):
         # TODO: Implement forward pass
         # Your final implementation shouldn't have any loops
-        raise Exception("Not implemented!")
+        self.X = X.copy()
+        # B here is being broadcasted to (batch_size, n_output) shape
+        B = self.B.value
+        W = self.W.value
+        X = self.X
+        return np.dot(X, W) + B
 
     def backward(self, d_out):
         """
@@ -117,10 +123,16 @@ class FullyConnectedLayer:
 
         # It should be pretty similar to linear classifier from
         # the previous assignment
-
-        raise Exception("Not implemented!")
-
-        return d_input
+        B = self.B.value
+        W = self.W.value
+        X = self.X
+        
+        batch_size = X.shape[0]
+        n_output = B.shape[1]
+        self.W.grad = np.dot(np.transpose(X), d_out)
+        self.B.grad = np.sum(d_out,axis = 0).reshape(1,n_output)
+    
+        return np.dot(d_out, np.transpose(W))
 
     def params(self):
         return {'W': self.W, 'B': self.B}
