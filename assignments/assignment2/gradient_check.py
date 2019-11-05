@@ -123,20 +123,23 @@ def check_model_gradient(model, X, y,
     Returns:
       bool indicating whether gradients match or not
     """
+    
+
+    layers = model.layers
     params = model.params()
+    for layer_key in layers.keys():
+        for param_key in params[layer_key].keys():
+            print("Checking gradient for %s in layer %s" % (param_key, layer_key))
+            param = params[layer_key][param_key]
+            initial_w = param.value
 
-    for param_key in params:
-        print("Checking gradient for %s" % param_key)
-        param = params[param_key]
-        initial_w = param.value
+            def helper_func(w):
+                param.value = w
+                loss = model.compute_loss_and_gradients(X, y)
+                grad = param.grad
+                return loss, grad
 
-        def helper_func(w):
-            param.value = w
-            loss = model.compute_loss_and_gradients(X, y)
-            grad = param.grad
-            return loss, grad
-
-        if not check_gradient(helper_func, initial_w, delta, tol):
-            return False
+            if not check_gradient(helper_func, initial_w, delta, tol):
+                return False
 
     return True
