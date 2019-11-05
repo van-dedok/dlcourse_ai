@@ -52,7 +52,7 @@ def cross_entropy_loss(probs, target_index):
     elif len(probs.shape) == 2:
             batch_size = probs.shape[0]
             relevant_probs = np.take_along_axis(probs, target_index, axis = 1)
-            relevant_probs = np.where(relevant_probs == 0., 1e-100, relevant_probs)
+            relevant_probs = np.where(relevant_probs == 0., 1e-300, relevant_probs)
             return -np.sum(np.log(relevant_probs)) / batch_size
     raise Exception("Wrong shape of probs array!!")
 
@@ -163,8 +163,8 @@ class ReLULayer:
 
 class FullyConnectedLayer:
     def __init__(self, n_input, n_output):
-        self.W = Param(0.001 * np.random.randn(n_input, n_output))
-        self.B = Param(0.001 * np.random.randn(1, n_output))
+        self.W = Param(0.1 * np.random.randn(n_input, n_output))
+        self.B = Param(0.1 * np.random.randn(1, n_output))
         self.X = None
 
     def forward(self, X):

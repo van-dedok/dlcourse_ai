@@ -17,7 +17,7 @@ class TwoLayerNet:
         reg, float - L2 regularization strength
         """
         self.reg = reg
-        self.layers = dict()
+        self.layers = {}
         self.layers['hidden'] = FullyConnectedLayer(n_input, hidden_layer_size)
         self.layers['hidden_ReLU'] = ReLULayer()
         self.layers['output'] = FullyConnectedLayer( hidden_layer_size, n_output)
@@ -45,6 +45,7 @@ class TwoLayerNet:
         # Hint: using self.params() might be useful!
         
         self.nullify_grads()
+           
         
         #raise Exception("Not implemented!")
         
@@ -78,11 +79,11 @@ class TwoLayerNet:
         #print()
         #print(l2_regularization(params[layer][param].value, self.reg))
         
-        for layer in layers.keys():
-            for param in params[layer].keys():
-                loss_reg, dparam_reg = l2_regularization(params[layer][param].value, self.reg)
-                loss += loss_reg
-                params[layer][param].grad += dparam_reg
+       
+        for param_name in params.keys():
+            loss_reg, dparam_reg = l2_regularization(params[param_name].value, self.reg)
+            loss += loss_reg
+            params[param_name].grad += dparam_reg
         
         #raise Exception("Not implemented!")
 
@@ -112,18 +113,26 @@ class TwoLayerNet:
 
     def params(self):
         result = {}
-        layers = self.layers
-        #here the "result" variable is dict of dicts -- first key refers
-        # to layer, second -- to the parametr
-        result = {key: layers[key].params() for key in layers.keys()}
+        for layer_name in self.layers.keys():
+            params = self.layers[layer_name].params()
+            for param_name in params.keys():             
+                result[layer_name + "_" + param_name] = params[param_name]
+                
+        #My old implementaion: the "result" variable is dict of dicts -- first key refers
+        # to layer, second -- to the parameter  
+        #result = {key: layers[key].params() for key in layers.keys()}
         # TODO Implement aggregating all of the params
         return result
     
     def nullify_grads(self):
-        layers = self.layers
+    
         params = self.params()
+        for param_name in params.keys():
+            grad = params[param_name].grad
+            params[param_name].grad = np.zeros_like(grad)
+        '''   
         for layer in layers.keys():
             for param in params[layer].keys():
                 #grad_to_nullify = params[layer][param].grad
                 params[layer][param].grad = np.zeros_like(params[layer][param].grad)
-        return 0
+        '''

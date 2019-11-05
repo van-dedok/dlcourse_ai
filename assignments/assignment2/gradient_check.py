@@ -127,10 +127,9 @@ def check_model_gradient(model, X, y,
 
     layers = model.layers
     params = model.params()
-    for layer_key in layers.keys():
-        for param_key in params[layer_key].keys():
-            print("Checking gradient for %s in layer %s" % (param_key, layer_key))
-            param = params[layer_key][param_key]
+    for param_key in params.keys():
+            print("Checking gradient for %s parameter" % param_key)
+            param = params[param_key]
             initial_w = param.value
 
             def helper_func(w):
