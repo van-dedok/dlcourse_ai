@@ -14,9 +14,9 @@ def l2_regularization(W, reg_strength):
       gradient, np.array same shape as W - gradient of weight by l2 loss
     '''
     # TODO: Copy from previous assignment
-    raise Exception("Not implemented!")
+    #raise Exception("Not implemented!")
 
-    return loss, grad
+    return  reg_strength * np.sum (W * W), 2 * reg_strength * W
 
 
 def softmax_with_cross_entropy(predictions, target_index):
@@ -35,7 +35,24 @@ def softmax_with_cross_entropy(predictions, target_index):
       dprediction, np array same shape as predictions - gradient of predictions by loss value
     '''
     # TODO copy from the previous assignment
-    raise Exception("Not implemented!")
+    probs = softmax(predictions)
+    batch_size = probs.shape[0]
+    #print(probs.shape, target_index.reshape((batch_size,-1)).shape)
+    
+    if len(probs.shape) == 1:
+        loss = cross_entropy_loss(probs,target_index)
+        classes_num = probs.shape[0]
+        delta_array = (target_index == np.arange(classes_num))
+        dprediction = - (delta_array - probs)
+        
+    elif len(probs.shape) == 2:
+        batch_size = probs.shape[0]
+        #note the mess with shape of target_index
+        loss = cross_entropy_loss(probs,target_index.reshape(batch_size,1))
+        classes_num = probs.shape[1]
+        delta_array = (target_index.reshape((batch_size,-1)) == np.arange(classes_num))
+        dprediction = - (delta_array - probs) / batch_size
+
     return loss, dprediction
 
 
@@ -68,22 +85,55 @@ class ReLULayer:
 
 class FullyConnectedLayer:
     def __init__(self, n_input, n_output):
-        self.W = Param(0.001 * np.random.randn(n_input, n_output))
-        self.B = Param(0.001 * np.random.randn(1, n_output))
+        self.W = Param(0.1 * np.random.randn(n_input, n_output))
+        self.B = Param(0.1 * np.random.randn(1, n_output))
         self.X = None
 
     def forward(self, X):
-        # TODO copy from the previous assignment
-        raise Exception("Not implemented!")
+        # TODO: Implement forward pass
+        # Your final implementation shouldn't have any loops
+        self.X = X.copy()
+        # B here is being broadcasted to (batch_size, n_output) shape
+        B = self.B.value
+        W = self.W.value
+        X = self.X
+        return np.dot(X, W) + B
 
     def backward(self, d_out):
-        # TODO copy from the previous assignment
+        """
+        Backward pass
+        Computes gradient with respect to input and
+        accumulates gradients within self.W and self.B
+
+        Arguments:
+        d_out, np array (batch_size, n_output) - gradient
+           of loss function with respect to output
+
+        Returns:
+        d_result: np array (batch_size, n_input) - gradient
+          with respect to input
+        """
+        # TODO: Implement backward pass
+        # Compute both gradient with respect to input
+        # and gradients with respect to W and B
+        # Add gradients of W and B to their `grad` attribute
+
+        # It should be pretty similar to linear classifier from
+        # the previous assignment
+        B = self.B.value
+        W = self.W.value
+        X = self.X
         
-        raise Exception("Not implemented!")        
-        return d_input
+        batch_size = X.shape[0]
+        n_output = B.shape[1]
+        self.W.grad = np.dot(np.transpose(X), d_out)
+        self.B.grad = np.sum(d_out,axis = 0).reshape(1,n_output)
+    
+        return np.dot(d_out, np.transpose(W))
 
     def params(self):
-        return { 'W': self.W, 'B': self.B }
+        return {'W': self.W, 'B': self.B}
+
 
     
 class ConvolutionalLayer:
@@ -113,10 +163,13 @@ class ConvolutionalLayer:
 
 
     def forward(self, X):
-        batch_size, height, width, channels = X.shape
-
-        out_height = 0
-        out_width = 0
+        batch_size, height, width, input_channels = X.shape
+        
+        padding = self.padding
+        filter_size = self.filter_size
+        out_channels = self.out_channels
+        W = self.W
+        stride = 1
         
         # TODO: Implement forward pass
         # Hint: setup variables that hold the result
@@ -124,12 +177,27 @@ class ConvolutionalLayer:
         
         # It's ok to use loops for going over width and height
         # but try to avoid having any other loops
+        out_height = int((height - filter_size + 2 * padding) / stride + 1)
+        out_width = int((width - filter_size + 2 * padding) / stride + 1)
+        Y = np.zeros((batch_size, out_height, out_width, out_channels))
+
+        W = np.ones((filter_size, filter_size, input_channels, out_channels))
+        W_reshaped = W.reshape(filter_size * filter_size * input_channels, out_channels)
+
+        h_zeros = np.zeros((batch_size, padding, X.shape[2], input_channels))
+        X_pad = np.concatenate((h_zeros, X, h_zeros) ,axis = 1)
+        v_zeros = np.zeros((batch_size, X_pad.shape[1], padding, input_channels))
+        X_pad = np.concatenate((v_zeros, X_pad, v_zeros), axis = 2)
+
+
+
         for y in range(out_height):
             for x in range(out_width):
-                # TODO: Implement forward pass for specific location
+                window = X_pad[:,y:y + filter_size, x:x + filter_size,:]
+                window = window.reshape(batch_size, filter_size * filter_size * input_channels)
+                Y[:,y,x,:] = np.dot(window, W_reshaped)
                 pass
-        raise Exception("Not implemented!")
-
+        return Y
 
     def backward(self, d_out):
         # Hint: Forward pass was reduced to matrix multiply
