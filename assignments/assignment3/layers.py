@@ -160,15 +160,18 @@ class ConvolutionalLayer:
         self.B = Param(np.zeros(out_channels))
 
         self.padding = padding
+        self.X = None
 
 
     def forward(self, X):
+        self.X = X.copy()
         batch_size, height, width, input_channels = X.shape
         
         padding = self.padding
         filter_size = self.filter_size
         out_channels = self.out_channels
-        W = self.W
+        W = self.W.value
+        B = self.B.value
         stride = 1
         
         # TODO: Implement forward pass
@@ -177,25 +180,22 @@ class ConvolutionalLayer:
         
         # It's ok to use loops for going over width and height
         # but try to avoid having any other loops
-        out_height = int((height - filter_size + 2 * padding) / stride + 1)
-        out_width = int((width - filter_size + 2 * padding) / stride + 1)
+        out_height = int((height - filter_size + 2 * padding) / stride + 1.)
+        out_width = int((width - filter_size + 2 * padding) / stride + 1.)
         Y = np.zeros((batch_size, out_height, out_width, out_channels))
 
-        W = np.ones((filter_size, filter_size, input_channels, out_channels))
+        #W = np.ones((filter_size, filter_size, input_channels, out_channels))
         W_reshaped = W.reshape(filter_size * filter_size * input_channels, out_channels)
 
-        h_zeros = np.zeros((batch_size, padding, X.shape[2], input_channels))
-        X_pad = np.concatenate((h_zeros, X, h_zeros) ,axis = 1)
-        v_zeros = np.zeros((batch_size, X_pad.shape[1], padding, input_channels))
-        X_pad = np.concatenate((v_zeros, X_pad, v_zeros), axis = 2)
-
-
+        X_pad = self.get_X_pad(X)
+        B_broadcasted = np.concatenate([B.reshape(1,-1)] * batch_size)
+        
 
         for y in range(out_height):
             for x in range(out_width):
                 window = X_pad[:,y:y + filter_size, x:x + filter_size,:]
                 window = window.reshape(batch_size, filter_size * filter_size * input_channels)
-                Y[:,y,x,:] = np.dot(window, W_reshaped)
+                Y[:,y,x,:] = np.dot(window, W_reshaped) + B_broadcasted
                 pass
         return Y
 
@@ -204,9 +204,15 @@ class ConvolutionalLayer:
         # You already know how to backprop through that
         # when you implemented FullyConnectedLayer
         # Just do it the same number of times and accumulate gradients
-
-        batch_size, height, width, channels = X.shape
+        B = self.B.value
+        W = self.W.value
+        X = self.X
+        filter_size = self.filter_size
+        out_channels = self.out_channels
+        
+        batch_size, height, width, input_channels = X.shape
         _, out_height, out_width, out_channels = d_out.shape
+        print(d_out.shape)
 
         # TODO: Implement backward pass
         # Same as forward, setup variables of the right shape that
@@ -214,15 +220,37 @@ class ConvolutionalLayer:
         # of the output
 
         # Try to avoid having any other loops here too
+        
+
+        X_pad = self.get_X_pad(X)
+        W_reshaped = W.reshape(filter_size * filter_size * input_channels, out_channels)
+        #self.W.grad inicialized as zeros, check if you don't trust!
         for y in range(out_height):
             for x in range(out_width):
                 # TODO: Implement backward pass for specific location
                 # Aggregate gradients for both the input and
                 # the parameters (W and B)
+                window = X_pad[:,y:y + filter_size, x:x + filter_size,:]
+                window = window.reshape(batch_size, filter_size * filter_size * input_channels)
+                self.W.grad += np.dot(np.transpose(window), d_out[:,y,x,:]).reshape(batch_size,filter_size,filter_size,input_channels)
                 pass
-
+        print("Window shape: ", window)
+        print("d_out[:,x,y,:] shape: ", d_out[:,y,x,:].shape)
+        print("self.W.grad shape: ", self.W.grad.shape )
+        print("")
+    
+        #return np.dot(d_out, np.transpose(W))
         raise Exception("Not implemented!")
-
+        
+    def get_X_pad(self, X):
+        padding = self.padding
+        batch_size, height, width, input_channels = X.shape
+        h_zeros = np.zeros((batch_size, padding, X.shape[2], input_channels))
+        X_pad = np.concatenate((h_zeros, X, h_zeros) ,axis = 1)
+        v_zeros = np.zeros((batch_size, X_pad.shape[1], padding, input_channels))
+        X_pad = np.concatenate((v_zeros, X_pad, v_zeros), axis = 2)
+        return X_pad
+    
     def params(self):
         return { 'W': self.W, 'B': self.B }
 
