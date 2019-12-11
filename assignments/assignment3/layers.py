@@ -223,8 +223,12 @@ class ConvolutionalLayer:
         
 
         X_pad = self.get_X_pad(X)
+        X_pad_grad = np.zeros_like(X)
         W_reshaped = W.reshape(filter_size * filter_size * input_channels, out_channels)
         #self.W.grad inicialized as zeros, check if you don't trust!
+        X_grad = np.zeros_like(X)
+        #print("self.W shape: ", self.W.value.shape )
+        #print("d_out[:,y,x,:]: ", self.d_out[:,1,1,:].shape)
         for y in range(out_height):
             for x in range(out_width):
                 # TODO: Implement backward pass for specific location
@@ -232,15 +236,24 @@ class ConvolutionalLayer:
                 # the parameters (W and B)
                 window = X_pad[:,y:y + filter_size, x:x + filter_size,:]
                 window = window.reshape(batch_size, filter_size * filter_size * input_channels)
-                self.W.grad += np.dot(np.transpose(window), d_out[:,y,x,:]).reshape(batch_size,filter_size,filter_size,input_channels)
+                
+                self.W.grad += np.dot(np.transpose(window), d_out[:,y,x,:]).\
+                reshape(batch_size, filter_size, filter_size, out_channels)
+                
+                self.B.grad += np.sum(d_out[:,y,x,:],axis = 0).reshape(out_channels)
+                print("Shape of prod: ", np.dot(d_out[:,y,x,:], np.transpose(W_reshaped)).shape)
+                X_pad_grad[:,y:y + filter_size, x:x + filter_size,:] = \
+                np.dot(d_out[:,y,x,:], np.transpose(W_reshaped))
+                
                 pass
         print("Window shape: ", window)
         print("d_out[:,x,y,:] shape: ", d_out[:,y,x,:].shape)
         print("self.W.grad shape: ", self.W.grad.shape )
-        print("")
-    
-        #return np.dot(d_out, np.transpose(W))
-        raise Exception("Not implemented!")
+        print("B.shape: ", self.B.grad.shape)
+        print("Shape of prod: ", np.dot(d_out[:,y,x,:], np.transpose(W)).shape)
+        
+        return self.remove_pad(X_pad_grad)
+        #raise Exception("Not implemented!")
         
     def get_X_pad(self, X):
         padding = self.padding
@@ -250,6 +263,8 @@ class ConvolutionalLayer:
         v_zeros = np.zeros((batch_size, X_pad.shape[1], padding, input_channels))
         X_pad = np.concatenate((v_zeros, X_pad, v_zeros), axis = 2)
         return X_pad
+    def remove_pad(self, X_pad):
+        return X_pad[:,self.padding:-self.padding,self.padding:-self.padding,:]
     
     def params(self):
         return { 'W': self.W, 'B': self.B }
