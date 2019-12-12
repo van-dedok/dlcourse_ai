@@ -166,7 +166,8 @@ class ConvolutionalLayer:
     def forward(self, X):
         self.X = X.copy()
         batch_size, height, width, input_channels = X.shape
-        
+        if self.in_channels != input_channels:
+            raise Exception("Wrong number of channels!")
         padding = self.padding
         filter_size = self.filter_size
         out_channels = self.out_channels
@@ -212,7 +213,9 @@ class ConvolutionalLayer:
         
         batch_size, height, width, input_channels = X.shape
         _, out_height, out_width, out_channels = d_out.shape
-        print(d_out.shape)
+        if self.in_channels != input_channels:
+            raise Exception("Wrong number of channels!")
+        #print(d_out.shape)
 
         # TODO: Implement backward pass
         # Same as forward, setup variables of the right shape that
@@ -223,12 +226,12 @@ class ConvolutionalLayer:
         
 
         X_pad = self.get_X_pad(X)
-        X_pad_grad = np.zeros_like(X)
+        X_pad_grad = np.zeros_like(X_pad)
         W_reshaped = W.reshape(filter_size * filter_size * input_channels, out_channels)
         #self.W.grad inicialized as zeros, check if you don't trust!
         X_grad = np.zeros_like(X)
         #print("self.W shape: ", self.W.value.shape )
-        #print("d_out[:,y,x,:]: ", self.d_out[:,1,1,:].shape)
+        #print("d_out[:,:,:,:]: ", d_out[:,0,0,:].shape)
         for y in range(out_height):
             for x in range(out_width):
                 # TODO: Implement backward pass for specific location
@@ -236,22 +239,27 @@ class ConvolutionalLayer:
                 # the parameters (W and B)
                 window = X_pad[:,y:y + filter_size, x:x + filter_size,:]
                 window = window.reshape(batch_size, filter_size * filter_size * input_channels)
-                
+                #print("np.dot(np.transpose(window), d_out[:,y,x,:]):", np.dot(np.transpose(window), d_out[:,y,x,:]).shape)
                 self.W.grad += np.dot(np.transpose(window), d_out[:,y,x,:]).\
-                reshape(batch_size, filter_size, filter_size, out_channels)
+                reshape( filter_size, filter_size, input_channels, out_channels)
                 
                 self.B.grad += np.sum(d_out[:,y,x,:],axis = 0).reshape(out_channels)
-                print("Shape of prod: ", np.dot(d_out[:,y,x,:], np.transpose(W_reshaped)).shape)
-                X_pad_grad[:,y:y + filter_size, x:x + filter_size,:] = \
-                np.dot(d_out[:,y,x,:], np.transpose(W_reshaped))
+                #print("Shape of prod: ", np.dot(d_out[:,y,x,:], np.transpose(W_reshaped)).shape)
+                
+
+                #print("X_pad_grad[:, y:y + filter_size, x:x + filter_size,:] shape", X_pad_grad[:, y:y + filter_size, x:x + filter_size,:].shape)
+               # print(X_pad[0, y:y + filter_size, x:x + filter_size,0])
+                #print()
+                X_pad_grad[:, y:y + filter_size, x:x + filter_size,:] += \
+                np.dot(d_out[:,y,x,:], np.transpose(W_reshaped)).reshape(batch_size, filter_size, filter_size, input_channels)
                 
                 pass
-        print("Window shape: ", window)
-        print("d_out[:,x,y,:] shape: ", d_out[:,y,x,:].shape)
-        print("self.W.grad shape: ", self.W.grad.shape )
-        print("B.shape: ", self.B.grad.shape)
-        print("Shape of prod: ", np.dot(d_out[:,y,x,:], np.transpose(W)).shape)
-        
+                #print("Window shape: ", window)
+                #print("d_out[:,x,y,:] shape: ", d_out[:,y,x,:].shape)
+                #print("self.W_reshaped shape: ", W_reshaped.shape )
+                #print("B.shape: ", self.B.grad.shape)
+                #print("Shape of prod: ", np.dot(d_out[:,y,x,:], np.transpose(W)).shape)
+                #print( X_pad. shape)
         return self.remove_pad(X_pad_grad)
         #raise Exception("Not implemented!")
         
@@ -263,8 +271,12 @@ class ConvolutionalLayer:
         v_zeros = np.zeros((batch_size, X_pad.shape[1], padding, input_channels))
         X_pad = np.concatenate((v_zeros, X_pad, v_zeros), axis = 2)
         return X_pad
+    
     def remove_pad(self, X_pad):
-        return X_pad[:,self.padding:-self.padding,self.padding:-self.padding,:]
+        if self.padding is not 0:
+            return X_pad[:, self.padding:-self.padding, self.padding:-self.padding, :]
+        else:
+            return X_pad
     
     def params(self):
         return { 'W': self.W, 'B': self.B }

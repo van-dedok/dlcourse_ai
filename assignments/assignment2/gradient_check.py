@@ -20,8 +20,8 @@ def check_gradient(f, x, delta=1e-5, tol=1e-4):
 
     fx, analytic_grad = f(x)
     analytic_grad = analytic_grad.copy()
-
-    assert analytic_grad.shape == x.shape
+    
+        assert analytic_grad.shape == x.shape
 
     it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])
     while not it.finished:
